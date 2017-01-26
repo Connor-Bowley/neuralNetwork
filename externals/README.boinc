@@ -1,0 +1,5 @@
+MAC installation / compilation
+
+cd boinc/mac_build
+source setupForBOINC.sh
+source BuildMacBOINC.sh -libc++ -c++11

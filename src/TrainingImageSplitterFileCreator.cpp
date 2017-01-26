@@ -607,7 +607,9 @@ int main (int argc, char** argv)
 				for(int i = 0; i < numClasses; i++)
 				{
 					int trueVal = trues[i];
-					char out_name[names[i].length()];
+					char *out_name;
+					out_name = new char[names[i].length()+1];
+					
 					for(int j= 0; j < names[i].length(); j++)
 					{
 						out_name[j] = names[i][j];
@@ -619,7 +621,7 @@ int main (int argc, char** argv)
 					outfile.write(out_name, sizeof(char) * (names[i].length() + 1)); // +1 for the '\0'
 
 					byteCount += sizeof(int) + (names[i].length()+1) * sizeof(char);
-
+					delete out_name;
 				}
 				endtrueVals = true;
 

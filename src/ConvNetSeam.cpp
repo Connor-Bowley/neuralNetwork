@@ -1,20 +1,10 @@
 #include "ConvNetSeam.h"
 
-//ConvNet
-//#include "ConvNetCL.h"
-
-//OpenCV
-// #include "opencv2/imgproc/imgproc.hpp"
-// #include "opencv2/highgui/highgui.hpp"
-
-
-
-//Other
-#include <iostream>
+#include <cmath>
 #include <fstream>
-#include <vector>
-#include <math.h>
+#include <iostream>
 #include <random>
+#include <vector>
 
 using namespace cv;
 using namespace std;

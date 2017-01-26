@@ -1,24 +1,29 @@
+#include "ConvNetCL.h"
+#include "ConvNetCommon.h"
 
-#include <string>
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
+
+#include <cctype>
+#include <ctime>
 #include <dirent.h>
+#include <string>
+#include <fstream>
+#include <iostream>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <iostream>
+//#include <thread>
 #include <vector>
-#include "ConvNetCL.h"
-#include <ctype.h>
-#include <fstream>
-#include <time.h>
-// #include <thread>
 
+#ifdef WIN32
+# include <io.h>
+#else
+# include <unistd.h>
+#endif
 
 using namespace cv;
 using namespace std;
-
-typedef vector<vector<vector<double> > > imVector;
+using namespace convnet;
 
 char *inPath, *outPath;
 int imageNum = 0;
@@ -26,76 +31,7 @@ int stride = 1;
 
 int inputWidth, inputHeight;
 
-string secondsToString(time_t seconds)
-{
-	time_t secs = seconds%60;
-	time_t mins = (seconds%3600)/60;
-	time_t hours = seconds/3600;
-	char out[100];
-	if(hours > 0)
-		sprintf(out,"%ld hours, %ld mins, %ld secs",hours,mins,secs);
-	else if(mins > 0)
-		sprintf(out,"%ld mins, %ld secs",mins,secs);
-	else
-		sprintf(out,"%ld secs",secs);
-	string outString = out;
-	return outString;
-}
-
-void resize3DVector(vector<vector<vector<double> > > &vect, int width, int height, int depth)
-{
-	vect.resize(width);
-	for(int i=0; i < width; i++)
-	{
-		vect[i].resize(height);
-		for(int j=0; j < height; j++)
-		{
-			vect[i][j].resize(depth);
-		}
-	}
-}
-
-void setAll3DVector(vector<vector<vector<double> > > &vect, double val)
-{
-	for(int i=0; i< vect.size(); i++)
-	{
-		for(int j=0; j< vect[i].size(); j++)
-		{
-			for(int k=0; k< vect[i][j].size(); k++)
-			{
-				vect[i][j][k] = val;
-			}
-		}
-	}
-}
-
-double vectorSum(const vector<double>& vect)
-{
-	double sum=0;
-	for(int i=0; i<vect.size(); i++)
-		sum += vect[i];
-	return sum;
-}
-
-double vectorSumSq(const vector<double>& vect)
-{
-	double sum=0;
-	for(int i=0; i<vect.size(); i++)
-		sum += vect[i] * vect[i];
-	return sum;
-}
-
-bool allElementsEquals(vector<double>& array)
-{
-	for(int i=1; i < array.size(); i++)
-	{
-		if(array[0] != array[i])
-			return false;
-	}
-	return true;
-}
-
-// void _t_convertColorMatToVector(const Mat& m , vector<vector<vector<double> > > &dest, int row)
+// void _t_convertColorMatToVector(const Mat& m , vector<vector<vector > > &dest, int row)
 // {
 // 	for(int j=0; j< m.cols; j++)
 // 	{
@@ -106,7 +42,7 @@ bool allElementsEquals(vector<double>& array)
 // 	}
 // }
 
-// void convertColorMatToVector(const Mat& m, vector<vector<vector<double> > > &dest)
+// void convertColorMatToVector(const Mat& m, vector<vector<vector > > &dest)
 // {
 // 	if(m.type() != CV_8UC3)
 // 	{
@@ -146,9 +82,9 @@ void breakUpImage(const char* imageName, Net& net)
 	printf("%s rows: %d, cols: %d\n",imageName, numrows,numcols);
 
 
-	vector<vector< vector<double> > > fullImage; //2 dims for width and height, last dim for each possible category
-	resize3DVector(fullImage,numrows,numcols,net.getNumClasses());
-	setAll3DVector(fullImage,0);
+	imVector fullImage; //2 dims for width and height, last dim for each possible category
+	resize3DVector(fullImage, numrows, numcols, net.getNumClasses());
+	setAll3DVector(fullImage, 0);
 	// vector<imVector> imageRow(0); // this will hold all subimages from one row
 	vector<Mat> imageRow(0);
 	vector<int> calcedClasses(0);

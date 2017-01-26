@@ -13,188 +13,18 @@
 *
 *************************************/
 
-
-#include <iostream>
-#include <vector>
 #include "ConvNetCL.h"
-#include <ctype.h>
+#include "ConvNetCommon.h"
+
+#include <cctype>
+#include <ctime>
 #include <fstream>
-#include <time.h>
+#include <iostream>
 #include <random>
+#include <vector>
 
 using namespace std;
-
-typedef vector<vector<vector<double> > > imVector;
-
-long __ifstreamend;
-
-/**********************
- *	Helper Functions
- ***********************/
-
-void resize3DVector(vector<vector<vector<double> > > &vect, int width, int height, int depth)
-{
-	vect.resize(width);
-	for(int i=0; i < width; i++)
-	{
-		vect[i].resize(height);
-		for(int j=0; j < height; j++)
-		{
-			vect[i][j].resize(depth);
-		}
-	}
-}
-
-char readChar(ifstream& in)
-{
-	char num[1];
-	in.read(num,1);
-	return num[0];
-}
-unsigned char readUChar(ifstream& in)
-{
-	char num[1];
-	in.read(num,1);
-	return num[0];
-}
-
-short readShort(ifstream& in)
-{
-	short num;
-	in.read((char*)&num,sizeof(short));
-	return num;
-}
-unsigned short readUShort(ifstream& in)
-{
-	unsigned short num;
-	in.read((char*)&num,sizeof(unsigned short));
-	return num;
-}
-
-int readInt(ifstream& in)
-{
-	int num;
-	in.read((char*)&num,sizeof(int));
-	return num;
-}
-unsigned int readUInt(ifstream& in)
-{
-	unsigned int num;
-	in.read((char*)&num,sizeof(unsigned int));
-	return num;
-}
-
-float readFloat(ifstream& in)
-{
-	float num;
-	in.read((char*)&num,sizeof(float));
-	return num;
-}
-
-double readDouble(ifstream& in)
-{
-	double num;
-	in.read((char*)&num,sizeof(double));
-	return num;
-}
-
-string secondsToString(time_t seconds)
-{
-	time_t secs = seconds%60;
-	time_t mins = (seconds%3600)/60;
-	time_t hours = seconds/3600;
-	char out[100];
-	if(hours > 0)
-		sprintf(out,"%ld hours, %ld mins, %ld secs",hours,mins,secs);
-	else if(mins > 0)
-		sprintf(out,"%ld mins, %ld secs",mins,secs);
-	else
-		sprintf(out,"%ld secs",secs);
-	string outString = out;
-	return outString;
-}
-
-string secondsToString(float seconds)
-{
-	float secs = (int)seconds%60 + (seconds - (int)seconds);
-	time_t mins = ((int)seconds%3600)/60;
-	time_t hours = (int)seconds/3600;
-	char out[100];
-	if(hours > 0)
-		sprintf(out,"%ld hours, %ld mins, %0.2f secs",hours,mins,secs);
-	else if(mins > 0)
-		sprintf(out,"%ld mins, %0.2f secs",mins,secs);
-	else
-		sprintf(out,"%0.2f secs",secs);
-	string outString = out;
-	return outString;
-}
-
-/**********************
- *	Functions
- ***********************/
-
-// returns the true value
-double getNextImage(ifstream& in, imVector& dest, short x, short y, short z, short sizeByte)
-{
-	resize3DVector(dest,x,y,z);
-	for(int i=0; i < x; i++)
-	{
-		for(int j=0; j < y; j++)
-		{
-			for(int k=0; k < z; k++)
-			{
-				if(sizeByte == 1)
-					dest[i][j][k] = (double)readUChar(in);
-				else if(sizeByte == -1)
-					dest[i][j][k] = (double)readChar(in);
-				else if(sizeByte == 2)
-					dest[i][j][k] = (double)readUShort(in);
-				else if(sizeByte == -2)
-					dest[i][j][k] = (double)readShort(in);
-				else if(sizeByte == 4)
-					dest[i][j][k] = (double)readUInt(in);
-				else if(sizeByte == -4)
-					dest[i][j][k] = (double)readInt(in);
-				else if(sizeByte == 5)
-					dest[i][j][k] = (double)readFloat(in);
-				else if(sizeByte == 6)
-					dest[i][j][k] = readDouble(in);
-				else
-				{
-					cout << "Unknown sizeByte: " << sizeByte << ". Exiting" << endl;
-					exit(0);
-				}
-			}
-		}
-	}
-
-	//return the trueVal
-	return (double)readUShort(in);
-}
-
-void convertBinaryToVector(ifstream& in, vector<imVector>& dest, vector<double>& trueVals, short sizeByte, short xSize, short ySize, short zSize)
-{
-	if(!in.is_open())
-	{
-		cout << "ifstream was not open. Exiting." << endl;
-		exit(0);;
-	}	
-
-	//cout << "Size: " << sizeByte << " x: " << xSize << " y: " << ySize << " z: " << zSize << endl;
-	while(in.tellg() != __ifstreamend)// && !in.eof())
-	{
-		if(in.tellg() > __ifstreamend)
-		{
-			cout << "The counter went past the max. There might be something wrong with the file format" << endl;
-			break;
-		}
-		dest.resize(dest.size() + 1);
-		trueVals.push_back(getNextImage(in,dest.back(),xSize,ySize,zSize,sizeByte));
-	}
-
-	cout << "Num images = " << dest.size() << endl;
-}
+using namespace convnet;
 
 int main(int argc, char** argv)
 {
@@ -218,7 +48,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	time_t starttime,endtime;
+	time_t starttime, endtime;
 
 	string outputName;
 	bool saveNewWeights = false;
@@ -308,59 +138,6 @@ int main(int argc, char** argv)
 			return 0;
 	}
 
-	ifstream in;
-	in.open(argv[2]);
-
-	if(!in.is_open())
-	{
-		cout << "Unable to open file \"" << argv[2] << "\". Exiting." << endl;
-		return 0;
-	}
-
-	in.seekg(0, in.end);
-	__ifstreamend = in.tellg();
-	in.seekg(0, in.beg);
-
-	short sizeByte = readShort(in);
-	short xSize = readShort(in);
-	short ySize = readShort(in);
-	short zSize = readShort(in);
-
-	if(xSize == 0 || ySize == 0 || zSize == 0)
-	{
-		cout << "None of the dimensions can be zero. Exiting." << endl;
-		exit(0);
-	}
-
-	vector<string> names;
-	vector<int> trues;
-
-	char oldOrNew = readChar(in);
-	if(oldOrNew == '\0') // new
-	{
-		int numClasses = readInt(in);
-		for(int i = 0; i < numClasses; i++)
-		{
-			unsigned int tru = readUInt(in);
-			char ch = readChar(in);
-			string name = "";
-			while(ch != '\0')
-			{
-				name += ch;
-				ch = readChar(in);
-			}
-
-			names.push_back(name);
-			trues.push_back(tru);
-		}
-	}
-	else //old
-	{
-		in.seekg(0, in.beg);
-		for(int i = 0; i < 4; i++)
-			readShort(in);
-	}
-
 	//set up net
 	Net net(argv[1]);
 	if(learningRate != -1)
@@ -400,13 +177,17 @@ int main(int argc, char** argv)
 	//get images and add them
 	vector<imVector> images(0);
 	vector<double> trueVals(0);
+	vector<string> names;
+	vector<int> trues;
+	short sizeByte, xSize, ySize, zSize;
 
 	starttime = time(NULL);
-	convertBinaryToVector(in,images,trueVals,sizeByte,xSize,ySize,zSize);
+	if (!convertBinaryToVector(argv[2], images, &trueVals, &names, &trues, sizeByte, xSize, ySize, zSize)) {
+		cout << "Exiting." << endl;
+		return 0;
+	}
 	endtime = time(NULL);
 	cout << "Time to bring in training data: " << secondsToString(endtime - starttime) << endl;
-
-	in.close();
 
 	cout << "Adding training data" << endl;
 	net.setTrainingData(images,trueVals);
@@ -416,43 +197,24 @@ int main(int argc, char** argv)
 	printf("\n");
 
 	//get test images if needed
-	vector<imVector> testImages(0);
-	vector<double> testTrueVals(0);
-	if(haveTest)
-	{
-		ifstream testIn;
-		in.open(testSetName.c_str());
-		if(!in.is_open())
-		{
-			cout << "Unable to open test file \"" << testSetName << "\". Exiting." << endl;
-			return 0;
-		}
-		in.seekg(0, in.end);
-		__ifstreamend = in.tellg();
-		in.seekg(0, in.beg);
+	if(haveTest) {
+		vector<imVector> testImages(0);
+		vector<double> testTrueVals(0);
 
-		short tsizeByte = readShort(in);
-		short txSize = readShort(in);
-		short tySize = readShort(in);
-		short tzSize = readShort(in);
-		if(txSize != xSize || tySize != ySize || tzSize != zSize)
-		{
-			printf("Training and test images must be of same size.\n");
-			return 0;
-		}
-
-		printf("Bringing in testing data from file: %s\n", testSetName.c_str());
+		cout << "Bringing in testing data from file: " << testSetName.c_str()) << endl;
 		starttime = time(NULL);
-		convertBinaryToVector(in,testImages,testTrueVals,tsizeByte,txSize,tySize,tzSize);
+		if (!convertBinaryToVectorTest(testSetName.c_str(), testImages, &testTrueVals, sizeByte, xSize, ySize, zSize)) {
+			cout << "Exiting." << endl;
+			return 0;
+		}
 		endtime = time(NULL);
 		cout << "Time to bring in test data: " << secondsToString(endtime - starttime) << endl;
-		in.close();
 
 		net.addTestData(testImages, testTrueVals);
 
-		printf("Test Set Distribution:\n");
+		cout << "Test Set Distribution:" << endl;
 		net.printTestDistribution();
-		printf("\n");
+		cout << endl;
 	}
 
 

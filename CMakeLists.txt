@@ -1,169 +1,85 @@
-cmake_minimum_required(VERSION 2.8)
-project( ConvNetTest )
-#set variables
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-SET( SRCS src/ConvNetTest.cpp src/ConvNet.cpp )
-SET( CMAKE_CXX_FLAGS "-std=c++11 -Wall -O3")
-SET( OpenCV_STATIC ON)
+cmake_minimum_required (VERSION 2.8)
+project (NeuralNetwork)
 
-list(APPEND CMAKE_PREFIX_PATH /usr/local)
+if (${CMAKE_BINARY_DIR} EQUAL ${CMAKE_SOURCE_DIR})
+    message (FATAL_ERROR "Building in source is not allowed. Create a build
+    directory.")
+endif()
 
+# all our options
+option(BUILD_BOINC "builds the BOINC app" ON)
+option(BUILD_DYNAMIC "build dynamic libraries instead of static" OFF)
 
+if (APPLE)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64")
+    add_definitions("-arch x86_64")
+endif ()
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules")
 
-#find packages and libraries
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+
+# check for the CXX11 or CXX0x compiler flags
+include (CheckCXXCompilerFlag)
+if (WIN32)
+    set(COMPILER_SUPPORTS_CXX11 1)
+else()
+    CHECK_CXX_COMPILER_FLAG(-std=c++11 COMPILER_SUPPORTS_CXX11)
+    CHECK_CXX_COMPILER_FLAG(-std=c++0x COMPILER_SUPPORTS_CXX0x)
+endif()
+
+# require CXX11
+if (COMPILER_SUPPORTS_CXX11)
+    if (NOT WIN32)
+        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    endif ()
+elseif (COMPILER_SUPPORTS_CXX0x)
+    if (NOT WIN32)
+        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+    endif ()
+else()
+    message (FATAL_ERROR "C++11 support required. Please update your compiler.")
+endif()
+
+if (BUILD_DYNAMIC)
+    set (OpenCV_STATIC OFF)
+else ()
+    set (OpenCV_STATIC ON)
+endif ()
+
+# find all our packages
 find_package( OpenCV )
-find_package( BOINC )
+IF (NOT OpenCV_FOUND)
+    message (FATAL_ERROR "Unable to find OpenCV.")
+ENDIF ()
+include_directories(${OpenCV_INCLUDE_DIRS})
+
 find_package( OpenCL )
-find_package( MySQL )
-find_package( OpenSSL )
-find_package( EXPAT )
+IF(NOT OpenCL_FOUND)
+    message (FATAL_ERROR "Unable to find OpenCL.")
+ENDIF ()
 
-FIND_LIBRARY(UNDVC_COMMON_LIBRARY
-	NAMES undvc_common
-	PATHS ../undvc_common/build
+include_directories(${OpenCL_INCLUDE_DIRS})
+message(“OpenCL include LIBS: ${OpenCL_LIBRARIES})
 
-	PATH_SUFFIXES lib
-)
+# add our includes directory
+include_directories (${CMAKE_SOURCE_DIR}/include)
+if (WIN32)
+    include_directories(${CMAKE_SOURCE_DIR}/win_include)
+    if (BUILD_DYNAMIC)
+        set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+        set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
+    else ()
+        set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+        set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+    endif ()
+endif ()
 
+# compile the main source
+add_subdirectory (src)
 
-#set include directories
-include_directories( ${PROJECT_SOURCE_DIR}/src )
-IF(OpenCV_FOUND)
-	include_directories(${OpenCV_INCLUDE_DIRS})
-ENDIF(OpenCV_FOUND)
-
-IF(OpenCL_FOUND)
-	include_directories(${OpenCL_INCLUDE_DIRS})
-	message(“OpenCL include LIBS: ${OpenCL_LIBRARY})
-ENDIF(OpenCL_FOUND)
-
-IF(BOINC_APP_FOUND OR BOINC_SERVER_FOUND)
-	include_directories(
-		${BOINC_INCLUDE_DIR}/boinc
-		${BOINC_INCLUDE_DIR}/api
-		${BOINC_INCLUDE_DIR}/lib
-		${BOINC_INCLUDE_DIR}/sched
-		${BOINC_INCLUDE_DIR}/tools
-		${BOINC_INCLUDE_DIR}
-		)
-	add_definitions(-D_BOINC_)
-ENDIF(BOINC_APP_FOUND OR BOINC_SERVER_FOUND)
-
-IF(BOINC_SERVER_FOUND)
-	include_directories(
-		${BOINC_INCLUDE_DIR}/db
-		../undvc_common
-	)
-	link_directories(/home/tdesell/boost_1_53_0/stage/lib)
-ENDIF(BOINC_SERVER_FOUND)
-
-IF(EXPAT_FOUND)
-	include_directories(${EXPAT_INCLUDE_DIRS})
-ENDIF(EXPAT_FOUND)
-
-IF(MYSQL_FOUND)
-	include_directories(${MYSQL_INCLUDE_DIR})
-ENDIF(MYSQL_FOUND)
-
-add_library(UNDVC_COMMON_LIBRARY STATIC IMPORTED GLOBAL ../undvc_common/build/libundvc_common.a)
-#set_target_properties(UNDVC_COMMON_LIBRARY PROPERTIES IMPORTED_LOCATION ../undvc_common/build/)
-
-IF(OpenCV_FOUND AND OpenCL_FOUND)
-	add_executable( ConvNetFullImageDriverCL src/ConvNetFullImageDriverCL.cpp src/ConvNetCL.cpp)
-	add_executable( ConvNetFullImageDriverParallelCL src/ConvNetFullImageDriverParallelCL.cpp src/ConvNetCL.cpp)
-	add_executable( ConvNetVideoDriverParallelCL src/ConvNetVideoDriverParallelCL.cpp src/ConvNetCL.cpp)
-	add_executable( ConvNetVideoDriverParallelCL_multiNet src/ConvNetVideoDriverParallelCL_multiNet.cpp src/ConvNetCL.cpp)
-
-
-	target_link_libraries( ConvNetFullImageDriverCL ${OpenCV_LIBS} ${OpenCL_LIBRARY})
-	target_link_libraries( ConvNetFullImageDriverParallelCL ${OpenCV_LIBS} ${OpenCL_LIBRARY})
-	target_link_libraries( ConvNetVideoDriverParallelCL ${OpenCV_LIBS} ${OpenCL_LIBRARY})
-	target_link_libraries( ConvNetVideoDriverParallelCL_multiNet ${OpenCV_LIBS} ${OpenCL_LIBRARY})
-
-	add_executable( SeamTest src/SeamTest.cpp src/ConvNetSeam src/ConvNetEvent)
-	target_link_libraries(SeamTest ${OpenCV_LIBS} ${OpenCL_LIBRARY})
-ENDIF(OpenCV_FOUND AND OpenCL_FOUND)
-
-IF(OpenCV_FOUND AND OpenCL_FOUND AND BOINC_APP_FOUND)
-	add_executable( ConvNetVideoDriverCL_BOINC src/ConvNetVideoDriverCL_BOINC.cpp src/ConvNetCL.cpp)
-	add_executable( ConvNetFullImageDriverCL_BOINC src/ConvNetFullImageDriverCL_BOINC.cpp src/ConvNetCL.cpp)
-
-	target_link_libraries( ConvNetFullImageDriverCL_BOINC ${OpenCV_LIBS} ${OpenCL_LIBRARY} ${BOINC_APP_LIBRARIES} ${BOINC_SERVER_LIBRARIES})
-	target_link_libraries( ConvNetVideoDriverCL_BOINC ${OpenCV_LIBS} ${OpenCL_LIBRARY} ${BOINC_APP_LIBRARIES})
-
-	add_executable( ConvNetSeamRun_BOINC src/ConvNetSeamRun_BOINC.cpp src/ConvNetSeam.cpp src/ConvNetCL.cpp src/ConvNetEvent)
-	target_link_libraries(ConvNetSeamRun_BOINC ${OpenCL_LIBRARY} ${OpenCV_LIBS} ${BOINC_APP_LIBRARIES})
-ENDIF(OpenCV_FOUND AND OpenCL_FOUND AND BOINC_APP_FOUND)
-
-IF(BOINC_SERVER_FOUND AND MYSQL_FOUND AND OPENSSL_FOUND AND EXPAT_FOUND)
-	FIND_PATH(UNDVC_COMMON_INCLUDE_DIR file_io.hxx
-		../undvc_common #add additional paths here if undvc_common in different directory
-		${PROJECT_SOURCE_DIR}/../undvc_common
-	)
-	include_directories( ${UNDVC_COMMON_INCLUDE_DIR} )
-
-	add_executable(ConvNetSeam_work_generator
-		src/ConvNetSeam_work_generator
-		src/ConvNetCL_light
-		src/ConvNetEvent
-		)
-	target_link_libraries(ConvNetSeam_work_generator ${UNDVC_COMMON_LIBRARY} ${BOINC_SERVER_LIBRARIES} ${MYSQL_LIBRARIES} ${BOINC_LIBRARIES} ${BOINC_APP_LIBRARIES} ${OPENSSL_LIBRARIES} boost_system boost_filesystem)
-
-	add_executable(ConvNetSeam_validator
-		${BOINC_INCLUDE_DIR}/sched/validator
-		${BOINC_INCLUDE_DIR}/sched/validate_util
-		${BOINC_INCLUDE_DIR}/sched/validate_util2
-		src/ConvNetSeam_validator
-		src/ConvNetEvent
-		/home/tdesell/csg_boinc/lib/parse.cpp
-		)
-	target_link_libraries(ConvNetSeam_validator ${UNDVC_COMMON_LIBRARY} ${BOINC_SERVER_LIBRARIES} ${MYSQL_LIBRARIES} boost_system boost_filesystem ${EXPAT_LIBRARIES} ${Boost_LIBRARIES} ${BOINC_LIBARIES} ${BOINC_APP_LIBARIES})
-
-	add_executable(ConvNetSeam_assimilator
-		${BOINC_INCLUDE_DIR}/sched/assimilator
-		${BOINC_INCLUDE_DIR}/sched/validate_util
-		src/ConvNetSeam_assimilator
-		src/ConvNetEvent
-		/home/tdesell/csg_boinc/lib/parse.cpp
-		)
-	target_link_libraries(ConvNetSeam_assimilator ${UNDVC_COMMON_LIBRARY} ${BOINC_SERVER_LIBRARIES} ${MYSQL_LIBRARIES} ${EXPAT_LIBRARIES})
-ENDIF(BOINC_SERVER_FOUND AND MYSQL_FOUND AND OPENSSL_FOUND AND EXPAT_FOUND)
-
-
-
-IF(OpenCV_FOUND AND OpenCL_FOUND AND MYSQL_FOUND)
-	add_executable( ConvNetSeamTrain_AllInOne src/ConvNetSeamTrain_AllInOne.cpp src/ConvNetSeam.cpp src/ConvNetCL.cpp src/ConvNetEvent)
-	target_link_libraries( ConvNetSeamTrain_AllInOne ${OpenCL_LIBRARY} ${OpenCV_LIBS} ${MYSQL_LIBRARIES} )
-ENDIF(OpenCV_FOUND AND OpenCL_FOUND AND MYSQL_FOUND)
-
-#Image/Binary
-IF(OpenCV_FOUND)
-	add_executable( TrainingImageFileCreator src/TrainingImageFileCreator.cpp )
-	add_executable( ImageSplitterFileCreator src/ImageSplitterFileCreator.cpp )
-	add_executable( TrainingImageSplitterFileCreator src/TrainingImageSplitterFileCreator.cpp )
-
-	target_link_libraries( ImageSplitterFileCreator ${OpenCV_LIBS} )
-	target_link_libraries( TrainingImageFileCreator ${OpenCV_LIBS} )
-	target_link_libraries( TrainingImageSplitterFileCreator ${OpenCV_LIBS} )
-ENDIF(OpenCV_FOUND)
-
-#Misc
-IF(OpenCL_FOUND)
-	add_executable( ConvNetTrainerCL src/ConvNetTrainerCL.cpp src/ConvNetCL.cpp )
-	add_executable( ConvNetContinuanceCL src/ConvNetContinuanceCL.cpp src/ConvNetCL.cpp )
-	target_link_libraries( ConvNetTrainerCL ${OpenCL_LIBRARY} )
-	target_link_libraries( ConvNetContinuanceCL ${OpenCL_LIBRARY} )
-
-	add_executable( kernelBuilder src/kernelBuilder.cpp )
-	target_link_libraries( kernelBuilder ${OpenCL_LIBRARY} )
-
-	add_executable( MNIST_test src/MNIST_test.cpp src/ConvNetCL)
-	target_link_libraries( MNIST_test ${OpenCL_LIBRARY} )
-ENDIF(OpenCL_FOUND)
-
-
-
-#testing ones
-add_executable( CLTest src/CLTest.cpp src/ConvNetCL_light)
-
+# compile BOINC
+if (${BUILD_BOINC})
+    add_subdirectory(boinc)
+endif()

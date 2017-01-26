@@ -13,3 +13,6 @@
 [submodule "externals/mysql-connector-cpp"]
 	path = externals/mysql-connector-cpp
 	url = https://github.com/mysql/mysql-connector-cpp.git
+[submodule "externals/boinc_depends_win_vs2013"]
+	path = externals/boinc_depends_win_vs2013
+	url = http://boinc.berkeley.edu/git/boinc_depends_win_vs2013.git

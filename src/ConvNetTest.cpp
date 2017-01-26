@@ -9,71 +9,29 @@
  *
  *********************************************/
 
-#include <iostream>
-#include <vector>
-#include <iomanip>
+#include "ConvNet.h"
+#include "ConvNetCommon.h"
+
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "ConvNet.h"
+
+#include <cassert>
+#include <ctime>
 #include <dirent.h>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <string>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fstream>
 #include <thread>
-#include <time.h>
-#include <string>
+#include <vector>
 
 using namespace std;
 using namespace cv;
+using namespace convnet;
 
-string secondsToString(time_t seconds)
-{
-	time_t secs = seconds%60;
-	time_t mins = (seconds%3600)/60;
-	time_t hours = seconds/3600;
-	char out[100];
-	if(hours > 0)
-	{
-		sprintf(out,"%ld hours, %ld mins, %ld secs",hours,mins,secs);
-	}
-	else if(mins > 0)
-	{
-		sprintf(out,"%ld mins, %ld secs",mins,secs);
-	}
-	else
-	{
-		sprintf(out,"%ld secs",secs);
-	}
-	string outString = out;
-	return outString;
-}
-
-void convert1DArrayTo3DVector(const double *array, int width, int height, int depth, vector<vector<vector<double> > > &dest)
-{
-	//resize dest vector
-	dest.resize(width);
-	for(int i=0; i < width; i++)
-	{
-		dest[i].resize(height);
-		for(int j=0; j < height; j++)
-		{
-			dest[i][j].resize(depth);
-		}
-	}
-	
-	for(int i=0; i < width;i++)
-	{
-		for(int j=0; j < height; j++)
-		{
-			for(int k=0; k < depth; k++)
-			{
-				dest[i][j][k] = *array++;
-			}
-		}
-	}
-}
-
-void _t_convertColorMatToVector(const Mat& m , vector<vector<vector<double> > > &dest, int row)
+void _t_convertColorMatToVector(const Mat& m , imVector& dest, int row)
 {
 	for(int j=0; j< m.cols; j++)
 	{
@@ -84,12 +42,12 @@ void _t_convertColorMatToVector(const Mat& m , vector<vector<vector<double> > > 
 	}
 }
 
-void threadTest(vector<vector<vector<double> > > &dest)
+void threadTest(imVector& dest)
 {
 	cout << dest.size() << endl;
 }
 
-void convertColorMatToVector(const Mat& m, vector<vector<vector<double> > > &dest)
+void convertColorMatToVector(const Mat& m, imVector& dest)
 {
 	if(m.type() != CV_8UC3)
 	{
@@ -100,7 +58,7 @@ void convertColorMatToVector(const Mat& m, vector<vector<vector<double> > > &des
 	int height2 = m.cols;
 	int depth2 = 3;
 	//resize dest vector
-	resize3DVector(dest,width2,height2,depth2);
+	resize3DVector<double>(dest,width2,height2,depth2);
 	thread *t = new thread[width2];
 	
 	for(int i=0; i< width2; i++)
@@ -175,10 +133,10 @@ void oldestMain()
 		1,1,0, 0,2,1, 0,1,0, 1,2,2, 2,0,2,
 		2,0,0, 2,0,2, 0,1,1, 2,1,0, 2,2,0};
 
-	vector<vector<vector<vector<double> > > > testVectors(1);
+	imVector testVectors(1);
 	vector<double> trueVals(1,1);
 	
-	convert1DArrayTo3DVector(testArray,5,5,3,testVectors[0]);
+	convert1DArrayTo3DVector<double>(testArray,5,5,3,testVectors[0]);
 
 
 	cout << "Making Net" << endl;
@@ -197,7 +155,7 @@ void oldestMain()
 	//delete testNet;
 }
 
-void getTrainingImages(const char* folder, int trueVal, vector<vector<vector<vector<double> > > >& images, vector<double>& trueVals)
+void getTrainingImages(const char* folder, int trueVal, imVector& images, vector<double>& trueVals)
 {
 	const char* inPath = folder;
 	bool isDirectory;

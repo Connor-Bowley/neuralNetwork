@@ -9,9 +9,11 @@
 #ifndef ____ConvNetCL__
 #define ____ConvNetCL__
 
+#include "ConvNetCommon.h"
+
+#include <cfloat>
 #include <string>
 #include <vector>
-#include <time.h>
 
 //OpenCV
 #include "opencv2/imgproc/imgproc.hpp"
@@ -67,8 +69,6 @@
 #define ANT_LEAK_NONE 0
 #define ANT_LEAK_LINEAR_DECREASE 1
 #define ANT_LEAK_EXPONENTIAL_DECREASE 2
-
-typedef std::vector<std::vector<std::vector<double> > > imVector;
 
 class Net{
 public:     // structs
@@ -264,16 +264,16 @@ public: 	// functions
 
 	//functions dealing with data
 		//training
-		bool addTrainingData(const std::vector<imVector>& trainingData, const std::vector<double>& trueVals);
+		bool addTrainingData(const std::vector<convnet::imVector>& trainingData, const std::vector<double>& trueVals);
 		bool addTrainingData(const std::vector<cv::Mat>& trainingData, const std::vector<double>& trueVals);
         //bool setTrainingDataShallow(double** images, double* trueVals, unsigned long numImages);
-		bool setTrainingData(const std::vector<imVector>& trainingData, const std::vector<double>& trueVals);
+		bool setTrainingData(const std::vector<convnet::imVector>& trainingData, const std::vector<double>& trueVals);
 		bool setTrainingData(const std::vector<cv::Mat>& trainingData, const std::vector<double>& trueVals);
 		void clearTrainingData();
-		bool addTestData(const std::vector<imVector>& testData, const std::vector<double>& trueVals);
+		bool addTestData(const std::vector<convnet::imVector>& testData, const std::vector<double>& trueVals);
 		bool addTestData(const std::vector<cv::Mat>& testData, const std::vector<double>& trueVals);
         //bool setTestDataShallow(double** images, double* trueVals,
-		bool setTestData(const std::vector<imVector>& testData, const std::vector<double>& trueVals);
+		bool setTestData(const std::vector<convnet::imVector>& testData, const std::vector<double>& trueVals);
 		bool setTestData(const std::vector<cv::Mat>& testData, const std::vector<double>& trueVals);
 		void clearTestData();
 		bool setTrainingType(int type);
@@ -281,9 +281,9 @@ public: 	// functions
         void printTestDistribution() const;
 
 		//running
-		void addData(const std::vector<imVector>& data);
+		void addData(const std::vector<convnet::imVector>& data);
 		void addData(const std::vector<cv::Mat>& data);
-		void setData(const std::vector<imVector>& data);
+		void setData(const std::vector<convnet::imVector>& data);
 		void setData(const std::vector<cv::Mat>& data);
 		void clearData();
 
@@ -363,7 +363,6 @@ private:	// functions
 	void pushCLWeights(std::vector<Layer*>& layers, const std::vector<cl_mem>& clWeights, const std::vector<cl_mem>& clBiases, const cl_command_queue& queue, cl_bool block);
 	void shuffleTrainingData(std::vector<std::vector<double>* >& trainingData, std::vector<double>& trueVals, int times = 1);
 	void shuffleData(std::vector<std::vector<double>* >& trainingData, int times = 1);
-	std::string secondsToString(time_t seconds);
 	void trainSetup(std::vector<cl_mem>& layerNeeds, std::vector<cl_mem>& velocities);
 	void feedForward(std::vector<cl_mem>& layerNeeds);
 	void feedForward(cl_mem** prevNeurons, cl_mem** neurons, std::vector<std::vector<int> >& __neuronDims, std::vector<Layer*>& __layers,
@@ -377,7 +376,6 @@ private:	// functions
 	const std::vector<cl_mem>& clWeights, const std::vector<cl_mem>& clBiases, const cl_command_queue queue, const Kernels& k);
 	void storeWeightsInHolder(WeightHolder& holder);
 	void loadWeightsFromHolder(WeightHolder& holder);
-	std::string tolower(std::string str);
 	bool stringToDims(std::string str, int* dims);
 
 

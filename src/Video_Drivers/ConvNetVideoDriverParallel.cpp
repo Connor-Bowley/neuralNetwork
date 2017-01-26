@@ -6,7 +6,6 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <iostream>
 #include <vector>
 #include "ConvNet.h"
@@ -21,6 +20,11 @@
  	#include "CL/cl.h"
 #endif
 
+#ifdef WIN32
+# include <io.h>
+#else
+# include <unistd.h>
+#endif
 
 using namespace cv;
 using namespace std;

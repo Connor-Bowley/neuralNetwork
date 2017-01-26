@@ -1,26 +1,30 @@
+#include "ConvNetCL.h"
+#include "ConvNetCommon.h"
 
-#include <string>
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include <iostream>
+
+#include <cassert>
+#include <cctype>
+#include <ctime>
 #include <dirent.h>
+#include <fstream>
+#include <iostream>
+#include <string>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
-#include <iostream>
-#include <vector>
-#include "ConvNetCL.h"
-#include <ctype.h>
-#include <fstream>
-#include <time.h>
 #include <thread>
-#include <cassert>
+#include <vector>
 
+#ifdef WIN32
+# include <io.h>
+#else
+# include <unistd.h>
+#endif
 
 using namespace cv;
 using namespace std;
-
-typedef vector<vector<vector<double> > > imVector;
+using namespace convnet;
 
 char *inPath, *outPath;
 int imageNum = 0;
@@ -33,82 +37,6 @@ int __width;
 int __height;
 
 int __momentRed = 0;
-
-void resize3DVector(vector<vector<vector<double> > > &vect, int width, int height, int depth)
-{
-	vect.resize(width);
-	for(int i=0; i < width; i++)
-	{
-		vect[i].resize(height);
-		for(int j=0; j < height; j++)
-		{
-			vect[i][j].resize(depth);
-		}
-	}
-}
-
-void setAll3DVector(vector<vector<vector<double> > > &vect, double val)
-{
-	for(int i=0; i< vect.size(); i++)
-	{
-		for(int j=0; j< vect[i].size(); j++)
-		{
-			for(int k=0; k< vect[i][j].size(); k++)
-			{
-				vect[i][j][k] = val;
-			}
-		}
-	}
-}
-
-string secondsToString(time_t seconds)
-{
-	time_t secs = seconds%60;
-	time_t mins = (seconds%3600)/60;
-	time_t hours = seconds/3600;
-	char out[100];
-	if(hours > 0)
-		sprintf(out,"%ld hours, %ld mins, %ld secs",hours,mins,secs);
-	else if(mins > 0)
-		sprintf(out,"%ld mins, %ld secs",mins,secs);
-	else
-		sprintf(out,"%ld secs",secs);
-	string outString = out;
-	return outString;
-}
-
-double vectorSumSq(const vector<double>& vect)
-{
-	double sum=0;
-	for(int i=0; i<vect.size(); i++)
-		sum += vect[i] * vect[i];
-	return sum;
-}
-double vectorSum(const vector<double>& vect)
-{
-	double sum=0;
-	for(int i=0; i<vect.size(); i++)
-		sum += vect[i];
-	return sum;
-}
-
-void squareElements(vector<vector<vector<double> > >& vect)
-{
-	for(int i=0; i < vect.size(); i++)
-		for(int j=0; j < vect[i].size(); j++)
-			for(int k=0; k < vect[i][j].size(); k++)
-				vect[i][j][k] = vect[i][j][k] * vect[i][j][k];
-}
-
-bool allElementsEquals(vector<double>& array)
-{
-	for(int i=1; i < array.size(); i++)
-	{
-		if(array[0] != array[i])
-			return false;
-	}
-	return true;
-}
 
 void _t_convertColorMatToVector(const Mat& m , vector<vector<vector<double> > > &dest, int row)
 {
@@ -159,7 +87,7 @@ void breakUpImage(Mat& image, Net& net, VideoWriter& outVideo, ofstream& outcsv)
 	int numrows = image.rows;
 	int numcols = image.cols;
 	//printf("%s rows: %d, cols: %d\n",imageName, numrows,numcols);
-	int length = 0;
+	size_t length = 0;
 	char tempout[255];
 
 	vector<vector< vector<double> > > fullImage; //2 dims for width and height, last dim for each possible category
@@ -224,7 +152,7 @@ void breakUpImage(Mat& image, Net& net, VideoWriter& outVideo, ofstream& outcsv)
 	//cout << endl;
 	//printVector(fullImage);
 
-	squareElements(fullImage);
+	squareElements3DVector(fullImage);
 	
 	//now we have the confidences for every pixel in the image
 	//so get the category for each pixel and make a new image from it
@@ -252,10 +180,10 @@ void breakUpImage(Mat& image, Net& net, VideoWriter& outVideo, ofstream& outcsv)
 			}
 			else
 			{
-				double blue = 255*fullImage[i][j][0];
+				uchar blue = (uchar)(255.0*fullImage[i][j][0]);
 				outPix[0] = blue; // blue
 				outPix[1] = 0;	  //green
-				double red = 255*fullImage[i][j][1];
+				uchar red = (uchar)(255.0*fullImage[i][j][1]);
 				outPix[2] = red;  // red
 				if(red > 150) //red > 50 || red > blue
 					redElement += (int)(red);
@@ -280,7 +208,7 @@ void breakUpImage(Mat& image, Net& net, VideoWriter& outVideo, ofstream& outcsv)
 			}*/
 		}
 	}
-	__momentRed = .8*__momentRed + .8*redElement;
+	__momentRed = (int)(.8*__momentRed + .8*redElement);
 
 	outVideo.write(outputMat);
 	outcsv << __momentRed << "," << __frameNum/10.0 << "\n";
@@ -325,8 +253,8 @@ void breakUpVideo(const char* videoName, Net& net)
 
 	//cout << "FPS = " << video.get(CV_CAP_PROP_FPS) << endl;
 
-	__width = video.get(CV_CAP_PROP_FRAME_WIDTH);
-	__height = video.get(CV_CAP_PROP_FRAME_HEIGHT);
+	__width = (int)video.get(CV_CAP_PROP_FRAME_WIDTH);
+	__height = (int)video.get(CV_CAP_PROP_FRAME_HEIGHT);
 
 	if(!outVideo.isOpened())
 	{

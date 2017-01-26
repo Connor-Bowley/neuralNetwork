@@ -14,6 +14,7 @@
  	#include "CL/cl.h"
 #endif
 
+// boinc
 #ifdef _BOINC_APP_
 	#include "diagnostics.h"
 	#include "filesys.h"

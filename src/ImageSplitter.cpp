@@ -9,8 +9,12 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
+#ifdef WIN32
+# include <io.h>
+#else
+# include <unistd.h>
+#endif
 
 using namespace cv;
 using namespace std;

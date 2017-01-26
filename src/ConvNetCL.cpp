@@ -12,18 +12,17 @@
 *
 *******************************************************/
 
-#include <algorithm>
 #include "ConvNetCL.h"
-#include <iostream>
-#include <iomanip>
-#include <cfloat>
-#include <random>
-#include <fstream>
-#include <random>
-#include <unordered_map>
-#include <sstream>
-#include <thread>
+#include "ConvNetCommon.h"
+
 #include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <random>
+#include <thread>
+#include <unordered_map>
 
 // 	includes brought in from ConvNetCL.h
 //
@@ -43,9 +42,7 @@
 
 using namespace std;
 using namespace cv;
-
-#define GETMAX(x,y) (x > y) ? x: y
-#define RET_FALSE {file.close(); return false;} //this is used in load but should be changed at some point probably
+using namespace convnet;
 
 typedef unsigned int uint;
 
@@ -2203,7 +2200,7 @@ void Net::miniBatchTrain(int batchSize, int epochs)
 	trainSetup(layerNeeds, velocities);
 
 	// vector<vector<double> > confidences;
-	double prevError = DBL_MAX;
+	double prevError = numeric_limits<double>::max();
 	double curError;
 
 	if(epochs == -1)
@@ -2367,13 +2364,13 @@ void Net::train(int epochs)
 	trainSetup(layerNeeds, velocities);
 
  	//set up stuff so we can exit based on error on test data
- 	double prevError = DBL_MAX;
+ 	double prevError = numeric_limits<double>::max();
  	double curError;
  	int timesStale = 0;
 
  	WeightHolder holder;
 
- // 	double prevTrainError = DBL_MAX;
+ // 	double prevTrainError = numeric_limits<double>::max();
 	// double curTrainError;
 
  	if(epochs == -1)
@@ -2810,7 +2807,7 @@ void Net::antTrain(uint maxIterations, uint population, int dataBatchSize)
 
 	Net* bestNet = nullptr;
 	uint bestCorrect = 0;
-	double bestFit = DBL_MAX;
+	double bestFit = numeric_limits<double>::max();
 	uint bestEpoch;
 
 
@@ -5913,22 +5910,6 @@ void Net::printTestDistribution() const
 	}
 }
 
-string Net::secondsToString(time_t seconds)
-{
-	time_t secs = seconds%60;
-	time_t mins = (seconds%3600)/60;
-	time_t hours = seconds/3600;
-	char out[100];
-	if(hours > 0)
-		sprintf(out,"%ld hours, %ld mins, %ld secs",hours,mins,secs);
-	else if(mins > 0)
-		sprintf(out,"%ld mins, %ld secs",mins,secs);
-	else
-		sprintf(out,"%ld secs",secs);
-	string outString = out;
-	return outString;
-}
-
 void Net::storeWeightsInHolder(WeightHolder& holder)
 {
 	holder.clearWeights();
@@ -5967,12 +5948,6 @@ void Net::loadWeightsFromHolder(WeightHolder& holder)
 			curConvLayer++;
 		}
 	}
-}
-
-string Net::tolower(string str)
-{
-	transform(str.begin(), str.end(), str.begin(), ::tolower);
-	return str;
 }
 
 bool Net::stringToDims(string str, int* dims)
@@ -6315,7 +6290,7 @@ bool Net::load(const char* filename)
 				else
 				{
 					printf("Line %d: Unimplemented activation type \"%s\".\n", lineNum, items[1].c_str());
-					RET_FALSE;
+					return false;
 				}
 			}
 			else if(items[0] == "auto_activ")
@@ -6327,7 +6302,7 @@ bool Net::load(const char* filename)
 				else
 				{
 					printf("Line %d: auto_activ must be set to either true or false.\n",lineNum);
-					RET_FALSE;
+					return false;
 				}
 			}
 			else if(items[0] == "input")
@@ -6335,17 +6310,17 @@ bool Net::load(const char* filename)
 				if(haveInput)
 				{
 					printf("Line %d. Cannot have input twice.\n", lineNum);
-					RET_FALSE;
+					return false;
 				}
 				if(!stringToDims(items[1],dims))
-					RET_FALSE;
+					return false;
 				init(dims[0],dims[1],dims[2]);
 				haveInput = true;
 			}
 			else if(!haveInput)
 			{
 				printf("Line %d: You need to have the input layer before any other layers.\n", lineNum);
-				RET_FALSE;
+				return false;
 			}
 			else if(items[0] == "conv")
 			{
@@ -6366,13 +6341,13 @@ bool Net::load(const char* filename)
 					else if(items[i].find("x") != string::npos)
 					{
 						bool goodDims = stringToDims(items[i], dims);
-						if(!goodDims) RET_FALSE;
+						if(!goodDims) return false;
 						dimIndex = i;
 					}
 					else
 					{
 						printf("Line %d: Unknown arg for Convolutional Layer \"%s\".\n",lineNum, items[i].c_str());
-						RET_FALSE;
+						return false;
 					}
 				}
 				string errors = "";
@@ -6399,20 +6374,20 @@ bool Net::load(const char* filename)
 				if(errors != "")
 				{
 					printf("%s\n", errors.c_str());
-					RET_FALSE;
+					return false;
 				}
 				bool success = addConvLayer(numFil,stride,filSize,pad);
 				if(!success)
 				{
 					printf("Line %d: Conv Layer failed to load successfully. Make sure the stride fits previous layer size.\n", lineNum);
-					RET_FALSE;
+					return false;
 				}
 				if(dims[0] != -1 && dims[1] != -1 && dims[2] != -1)
 				{
 					if(dims[0] != __neuronDims.back()[0] || dims[1] != __neuronDims.back()[1] || dims[2] != __neuronDims.back()[2])
 					{
 						printf("Line %d: The computed dimensions for conv layer do not match calculated.\n\t Given: %s, Calculated: %dx%dx%d\n", lineNum, items[dimIndex].c_str(),__neuronDims.back()[0],__neuronDims.back()[1],__neuronDims.back()[2]);
-						RET_FALSE;
+						return false;
 					}
 				}
 			}
@@ -6427,7 +6402,7 @@ bool Net::load(const char* filename)
 				else
 				{
 					printf("Line %d: Unknown or unimplemented activation type \"%s\". Try \"relu\" or \"leaky_relu\".\n", lineNum,items[1].c_str());
-					RET_FALSE;
+					return false;
 				}
 				bool success = addActivLayer(activType);
 				if(!success)
@@ -6448,13 +6423,13 @@ bool Net::load(const char* filename)
 					else if(items[i].find('x') != string::npos)
 					{
 						bool goodDims = stringToDims(items[i], dims);
-						if(!goodDims) RET_FALSE;
+						if(!goodDims) return false;
 						dimIndex = i;						
 					}
 					else
 					{
 						printf("Line %d: Unknown arg for MaxPool Layer \"%s\".\n",lineNum, items[i].c_str());
-						RET_FALSE;
+						return false;
 					}
 				}
 
@@ -6472,20 +6447,20 @@ bool Net::load(const char* filename)
 				if(errors != "")
 				{
 					printf("%s\n", errors.c_str());
-					RET_FALSE;
+					return false;
 				}
 				bool success = addMaxPoolLayer(pool, stride);
 				if(!success)
 				{
 					printf("Line %d: MaxPool Layer failed to load correctly. Make sure stride fits previous layer size.\n", lineNum);
-					RET_FALSE;
+					return false;
 				}
 				if(dims[0] != -1 && dims[1] != -1 && dims[2] != -1)
 				{
 					if(dims[0] != __neuronDims.back()[0] || dims[1] != __neuronDims.back()[1] || dims[2] != __neuronDims.back()[2])
 					{
 						printf("Line %d: The computed dimensions for maxpool layer do not match calculated.\n\t Given: %s, Calculated: %dx%dx%d\n", lineNum, items[dimIndex].c_str(),__neuronDims.back()[0],__neuronDims.back()[1],__neuronDims.back()[2]);
-						RET_FALSE;
+						return false;
 					}
 				}
 			}
@@ -6496,7 +6471,7 @@ bool Net::load(const char* filename)
 				if(items.size() > 3)
 				{
 					printf("Line %d: Too many args for Fully Connected Layer\n", lineNum);
-					RET_FALSE;
+					return false;
 				}
 				for(int i = 1; i < items.size(); i++)
 				{
@@ -6504,7 +6479,7 @@ bool Net::load(const char* filename)
 					if(items[i].find('x') != string::npos)
 					{
 						bool goodDims = stringToDims(items[i],dims);
-						if(!goodDims) RET_FALSE;
+						if(!goodDims) return false;
 						dimIndex = i;
 					}
 					else
@@ -6513,27 +6488,27 @@ bool Net::load(const char* filename)
 				if(outputSize <= 0)
 				{
 					printf("Line %d: pool must exist and be positive\n",lineNum);
-					RET_FALSE;
+					return false;
 				}
 				bool success = addFullyConnectedLayer(outputSize);
 				if(!success)
 				{
 					printf("Line %d: Error adding Fully Connected Layer.\n", lineNum);
-					RET_FALSE;
+					return false;
 				}
 				if(dims[0] != -1 && dims[1] != -1 && dims[2] != -1)
 				{
 					if(dims[0] != __neuronDims.back()[0] || dims[1] != __neuronDims.back()[1] || dims[2] != __neuronDims.back()[2])
 					{
 						printf("Line %d: The computed dimensions for fc layer do not match calculated.\n\t Given: %s, Calculated: %dx%dx%d\n", lineNum, items[dimIndex].c_str(),__neuronDims.back()[0],__neuronDims.back()[1],__neuronDims.back()[2]);
-						RET_FALSE;
+						return false;
 					}
 				}
 			}
 			else
 			{
 				printf("Line %d: Unknown arg \"%s\"\n", lineNum, line.c_str());
-				RET_FALSE;
+				return false;
 			}
 		}
 		file.close();

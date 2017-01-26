@@ -1,15 +1,9 @@
 #include "ConvNetEvent.h"
+#include "ConvNetCommon.h"
+
+using namespace convnet;
 
 //Vectors for each classes define
-int getTime(std::string tim) // must be in format hh::mm::ss. Military time
-{
-	int t = 0;
-	t += stoi(tim.substr(tim.rfind(':')+1)); // seconds
-	t += 60 * stoi(tim.substr(tim.find(':')+1, 2)); //minutes
-	t += 3600 * stoi(tim.substr(0,2)); //hours
-	return t;
-}
-
 void getClasses(int classLevel, std::vector<int>& dest)
 {
 	dest.clear();
@@ -33,40 +27,6 @@ void getClasses(int classLevel, std::vector<int>& dest)
 	}
 }
 
-std::string getTime(int tim) //in seconds. Formats to hh::mm::ss. Military time
-{
-	int seconds = tim % 60;
-	tim /= 60; //now tim is in minutes
-	int minutes = tim % 60;
-	int hours = tim / 60;
-
-	// printf("%2d:%2d:%2d\n", hours,minutes,seconds);
-
-	char s[3], m[3], h[3];
-	if(seconds < 10)
-		sprintf(s, "0%d",seconds);
-	else
-		sprintf(s, "%d", seconds);
-	if(minutes < 10)
-		sprintf(m, "0%d",minutes);
-	else
-		sprintf(m, "%d", minutes);
-	if(hours < 10)
-		sprintf(h, "0%d",hours);
-	else
-		sprintf(h, "%d", hours);
-	s[2] = '\0'; m[2] = '\0'; h[2] = '\0';
-	// printf("%s:%s:%s\n", h,m,s);
-	std::string out = h;
-	out += ":";
-	out += m;
-	out += ":";
-	out += s;
-
-	return out;
-}
-
-
 Event::Event()
 {
 	starttime = -1;
@@ -80,7 +40,7 @@ bool Event::equals(const Event &other)
 	return false;
 }
 
-Event::Event(std::string type, int starttime, int endtime)
+Event::Event(std::string type, long starttime, long endtime)
 {
 	this->type = type;
 	this->starttime = starttime;
@@ -128,29 +88,13 @@ std::string Event::toString() const
 }
 
 
-std::string secondsToString(time_t seconds)
-{
-	time_t secs = seconds%60;
-	time_t mins = (seconds%3600)/60;
-	time_t hours = seconds/3600;
-	char out[100];
-	if(hours > 0)
-		sprintf(out,"%ld hours, %ld mins, %ld secs",hours,mins,secs);
-	else if(mins > 0)
-		sprintf(out,"%ld mins, %ld secs",mins,secs);
-	else
-		sprintf(out,"%ld secs",secs);
-	std::string outstring = out;
-	return outstring;
-}
-
 bool containsEvent(std::vector<Event> events, std::string type)
 {
-	for(unsigned int i = 0; i < events.size(); i++)
-	{
-		if(events[i].type == type)
+	for (auto&& e : events) {
+		if(e.type == type)
 			return true;
 	}
+
 	return false;
 }
 

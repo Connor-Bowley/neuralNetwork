@@ -27,31 +27,24 @@
 #define PARENT_BEHAVIOR__STANDING 5
 #define PARENT_BEHAVIOR__SITTING 8
 
-
 //Vectors for each classes define
-int getTime(std::string tim); // must be in format hh::mm::ss. Military time
-
-
 void getClasses(int classLevel, std::vector<int>& dest);
-
-
-std::string getTime(int tim); //in seconds. Formats to hh::mm::ss. Military time
-
 
 //class definitions
 struct Event
 {
 	std::string type; // this should be the id from observation_types table
-	int starttime;
-	int endtime;
+	long starttime;
+	long endtime;
 	std::string starttime_string;
 	std::string endtime_string;
 	bool isOvernight; //this means the starttime is before midnight and endtime is after
 
-	Event(std::string type, int starttime, int endtime);
+	Event(std::string type, long starttime, long endtime);
 	Event(std::string event);
 	Event(const Event& other);
 	Event();
+
 	std::string toString() const;
 	bool equals(const Event& other);
 };
@@ -63,17 +56,18 @@ class Observations
 public:
 	Observations();
 	Observations(std::string obs);
+
+	void load(std::string obs);
+
 	void addEvent(std::string type, std::string starttime, std::string endtime);
 	void addEvent(std::string type, int starttime, int endtime);
 	void getEvents(std::string tim, std::vector<Event>& dest);
 	void getEvents(int tim, std::vector<Event>& dest);
 	void getAllEvents(std::vector<Event>& dest);
+
 	std::string toString() const;
-	void load(std::string obs);
 	bool equals(const Observations& other);
 };
-
-std::string secondsToString(time_t seconds);
 
 bool containsEvent(std::vector<Event> events, std::string type);
 

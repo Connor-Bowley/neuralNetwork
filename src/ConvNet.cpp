@@ -43,25 +43,20 @@
  *************************************************************************************************/
 
 #include "ConvNet.h"
-#include <iostream>
-#include <iomanip>
-#include <vector>
-#include <math.h>
-#include <limits>
-#include <string>
+
+#include <cmath>
 #include <fstream>
-#include <random>
-#include <cassert>
+#include <iomanip>
+#include <iostream>
+#include <limits>
 #include <thread>
-//#include <time.h>
+#include <random>
+
 #ifdef __APPLE__
  	#include "OpenCL/opencl.h"
 #else
  	#include "CL/cl.h"
 #endif
-
-
-#define GETMAX(x,y) (x > y) ? x: y
 
 using namespace std;
 

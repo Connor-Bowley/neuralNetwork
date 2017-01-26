@@ -1,3 +1,6 @@
+/**
+ * TODO: Convert to C++ standard <thread> then refactor.
+ */
 #include <string>
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -5,7 +8,6 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <iostream>
 #include <vector>
 #include "ConvNetCL.h"
@@ -14,12 +16,18 @@
 #include <time.h>
 #include <thread>
 #include <pthread.h>
+
 #ifdef __APPLE__
  	#include "OpenCL/opencl.h"
 #else
  	#include "CL/cl.h"
 #endif
 
+#ifdef WIN32
+# include <io.h>
+#else
+# include <unistd.h>
+#endif
 
 using namespace cv;
 using namespace std;

@@ -1,0 +1,73 @@
+# Building the project on Windows 10
+
+## Intall the dependencies
+
+### Visual Studio 2013
+
+* https://www.visualstudio.com/en-us/news/releasenotes/vs2013-community-vs
+* Run vs_community.exe
+
+### OpenCV
+
+* https://sourceforge.net/projects/opencvlibrary/files/opencv-win/2.4.13/opencv-2.4.13.exe/download
+* Download OpenCV .exe
+* Unpack the .exe to any folder
+* Copy opencv\ to C:\opencv
+
+### OpenCL
+
+* https://software.intel.com/en-us/intel-opencl
+* OR http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/
+* Register on Intel.com for the OpenCL SDK .exe
+* OR Agree to AMD requirements
+* Download the SDK and run the .exe
+
+### BOINC
+
+#### Download the BOINC and BOINC requirements submodules
+
+Open Git BASH
+cd C:\neuralNetwork
+git submodule init externals\boinc
+git submodule update externals\boinc
+git submodule init externals\boinc_depends_win_vs2013
+git submodule update externals\boinc_depends_win_vs2013
+
+#### Build BOINC
+
+* Open File Explorer and go to C:\neuralNetwork\externals\boinc\win_build
+* Double-click boinc_vs2013.sln to open VS2013 Solution
+* On the right, highlight all libboinc* projects (should be 5)
+* Change mode to Release \ Win32, right click the 5 projects, and select build
+* Change mode to Release \ x86, right click the 5 projects, and select build
+* Close VS2013
+
+## Build the 32-bit and 64-bit projects
+
+Note: Using "C:\neuralNetwork" as the intall location. Change as required.
+
+### Open the VS2013 Command Prompt
+Use File Explorer to go to C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\Tools\Shortcuts
+Open "Developer Command Prompt for VS2013"
+cd C:\neuralNetwork
+mkdir build
+mkdir build\Win32
+mkdir build\x64
+
+### Prepare the 32-bit project
+cd build\Win32
+cmake -DOpenCV_DIR=C:\opencv\build -G "Visual Studio 12 2013" ..\..
+cd ..
+
+### Prepare the 64-bit project
+cd x64
+cmake -DOpenCV_DIR=C:\opencv\build -G "Visual Studio 12 2013 Win64" ..\..\
+cd ..
+
+### Build all the projects desired
+cmake --build Win32 --config Release
+cmake --build x64 --config Release
+
+NOTE: Debug currently not working because all the libraries are in Release mode
+cmake --build Win32 --config Debug
+cmake --build x64 --config Debug
